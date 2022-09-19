@@ -15,7 +15,7 @@ class H3lpr(MakefilePackage):
 
     # Versions
     version("develop", branch="develop") 
-    version("1.0", commit="218dc208a7accb0b3a55dfa2897c52a01351e030")
+    version("1.0", commit="490386637946eb5dc350ff99abd5caab14a97254")
 
     # Dependencies
     depends_on("mpi")

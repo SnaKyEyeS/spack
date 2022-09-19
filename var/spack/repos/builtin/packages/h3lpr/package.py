@@ -10,10 +10,12 @@ from spack.package import *
 class H3lpr(MakefilePackage):
     """Helper library for profiling, logging, and parsing."""
 
+    # GitHub repository
+    git="ssh://git@github.com/van-Rees-Lab/h3lpr.git"
+
     # Versions
-    version("develop", 
-            branch="develop", 
-            git="ssh://git@github.com/van-Rees-Lab/h3lpr.git")
+    version("develop", branch="develop") 
+    version("1.0", commit="218dc208a7accb0b3a55dfa2897c52a01351e030")
 
     # Dependencies
     depends_on("mpi")

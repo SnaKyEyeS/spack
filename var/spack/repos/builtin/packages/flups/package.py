@@ -10,8 +10,9 @@ from spack.package import *
 class Flups(MakefilePackage):
     """FLUPS - A Fourier-based Library of Unbounded Poisson Solvers"""
 
-    # GitHub repository
-    git="ssh://git@git.immc.ucl.ac.be:examples/flups.git"
+    # GitLab repository
+    # You need to authenticate using an access token...
+    git="https://git.immc.ucl.ac.be/examples/flups.git"
 
     # Versions
     version("develop", branch="develop") 
@@ -54,7 +55,7 @@ class Flups(MakefilePackage):
             # Set no libname for Accfft, to override the dep
             "ACCFFT_LIBNAME": "",
         }
-        with open(env["ARCH_FILE"]) as f:
+        with open(env["ARCH_FILE"], "w") as f:
             for key in arch_file:
                 f.write(f"{key}:={arch_file[key]}")
 

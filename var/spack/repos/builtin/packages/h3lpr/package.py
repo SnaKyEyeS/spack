@@ -11,11 +11,11 @@ class H3lpr(MakefilePackage):
     """Helper library for profiling, logging, and parsing."""
 
     # GitHub repository
+    # You need to have a SSH key linked to your GitHub account
     git="ssh://git@github.com/van-Rees-Lab/h3lpr.git"
 
     # Versions
     version("develop", branch="develop") 
-    version("1.0", commit="490386637946eb5dc350ff99abd5caab14a97254")
 
     # Dependencies
     depends_on("mpi")
@@ -37,7 +37,7 @@ class H3lpr(MakefilePackage):
             "CXXFLAGS": "-03 -fopenmp",
             "LDFLAGS": "-fopenmp -lstdc++ -lm",
         }
-        with open(env["ARCH_FILE"]) as f:
+        with open(env["ARCH_FILE"], "w") as f:
             for key in arch_file:
                 f.write(f"{key}={arch_file[key]}")
 

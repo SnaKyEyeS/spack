@@ -7,18 +7,20 @@
 from spack.package import *
 
 
-class H3lpr(MakefilePackage):
-    """Helper library for profiling, logging, and parsing."""
+class Flups(MakefilePackage):
+    """FLUPS - A Fourier-based Library of Unbounded Poisson Solvers"""
 
     # GitHub repository
-    git="ssh://git@github.com/van-Rees-Lab/h3lpr.git"
+    git="ssh://git@git.immc.ucl.ac.be:examples/flups.git"
 
     # Versions
     version("develop", branch="develop") 
-    version("1.0", commit="490386637946eb5dc350ff99abd5caab14a97254")
 
     # Dependencies
     depends_on("mpi")
+    depends_on("hdf5")
+    depends_on("fftw")
+    depends_on("h3lpr")
 
     def edit(self, spec, prefix):
         # Use MPI's compiler
@@ -34,10 +36,25 @@ class H3lpr(MakefilePackage):
         arch_file = {
             "CC": spec["mpi"].mpicc,
             "CXX": spec["mpi"].mpicxx,
-            "CXXFLAGS": "-03 -fopenmp",
-            "LDFLAGS": "-fopenmp -lstdc++ -lm",
+            "CCFLAGS": "-03 -fopenmp -std=c++17 -DNDEBUG -DNO_PROF",
+            "CXXFLAGS": "-03 -fopenmp -std=c99 -DNDEBUG -DNO_PROF",
+            "LDFLAGS": "-fopenmp",
+            # FFTW
+            "FFTW_DIR": prefix,
+            "FFTW_LIB": prefix.lib,
+            "FFTW_DIR": prefix.dir,
+            # HDF5
+            "HDF5_DIR": prefix,
+            "HDF5_LIB": prefix.lib,
+            "HDF5_DIR": prefix.dir,
+            # H3LPR
+            "H3LPR_DIR": prefix,
+            "H3LPR_LIB": prefix.lib,
+            "H3LPR_DIR": prefix.dir,
+            # Set no libname for Accfft, to override the dep
+            "ACCFFT_LIBNAME": "",
         }
         with open(env["ARCH_FILE"]) as f:
             for key in arch_file:
-                f.write(f"{key}={arch_file[key]}")
+                f.write(f"{key}:={arch_file[key]}")
 

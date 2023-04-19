@@ -37,8 +37,9 @@ class Flups(MakefilePackage):
         arch_file = {
             "CC": spec["mpi"].mpicc,
             "CXX": spec["mpi"].mpicxx,
-            "CCFLAGS": "-03 -fopenmp -std=c++17 -DNDEBUG -DNO_PROF",
-            "CXXFLAGS": "-03 -fopenmp -std=c99 -DNDEBUG -DNO_PROF",
+            "OPTS": "-DNDEBUG -DNO_PROF",
+            "CCFLAGS": "-03 -fopenmp -std=c++17",
+            "CXXFLAGS": "-03 -fopenmp -std=c99",
             "LDFLAGS": "-fopenmp",
             # FFTW
             "FFTW_DIR": prefix,

@@ -86,13 +86,13 @@ def test_env_change_spec_in_definition(tmpdir, mock_packages, config, mutable_mo
     e.concretize()
     e.write()
 
-    assert any(x.satisfies("mpileaks@2.1%gcc") for x in e.user_specs)
+    assert any(x.intersects("mpileaks@2.1%gcc") for x in e.user_specs)
 
     e.change_existing_spec(spack.spec.Spec("mpileaks@2.2"), list_name="desired_specs")
     e.write()
 
-    assert any(x.satisfies("mpileaks@2.2%gcc") for x in e.user_specs)
-    assert not any(x.satisfies("mpileaks@2.1%gcc") for x in e.user_specs)
+    assert any(x.intersects("mpileaks@2.2%gcc") for x in e.user_specs)
+    assert not any(x.intersects("mpileaks@2.1%gcc") for x in e.user_specs)
 
 
 def test_env_change_spec_in_matrix_raises_error(
@@ -143,3 +143,49 @@ def test_user_view_path_is_not_canonicalized_in_yaml(tmpdir, config):
         snd = ev.Environment(env_path)
         assert snd.yaml["spack"]["view"] == view
         assert os.path.samefile(snd.default_view.root, absolute_view)
+
+
+def test_environment_cant_modify_environments_root(tmpdir):
+    filename = str(tmpdir.join("spack.yaml"))
+    with open(filename, "w") as f:
+        f.write(
+            """\
+ spack:
+   config:
+     environments_root: /a/black/hole
+   view: false
+   specs: []
+ """
+        )
+    with tmpdir.as_cwd():
+        with pytest.raises(ev.SpackEnvironmentError):
+            e = ev.Environment(tmpdir.strpath)
+            ev.activate(e)
+
+
+@pytest.mark.regression("35420")
+@pytest.mark.parametrize(
+    "original_content",
+    [
+        (
+            """\
+spack:
+  specs:
+  - matrix:
+    # test
+    - - a
+  concretizer:
+    unify: false"""
+        )
+    ],
+)
+def test_roundtrip_spack_yaml_with_comments(original_content, mock_packages, config, tmp_path):
+    """Ensure that round-tripping a spack.yaml file doesn't change its content."""
+    spack_yaml = tmp_path / "spack.yaml"
+    spack_yaml.write_text(original_content)
+
+    e = ev.Environment(str(tmp_path))
+    e.update_manifest()
+
+    content = spack_yaml.read_text()
+    assert content == original_content

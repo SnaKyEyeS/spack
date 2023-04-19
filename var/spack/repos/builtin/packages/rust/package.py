@@ -60,6 +60,9 @@ class Rust(Package):
     depends_on("pkgconfig", type="build")
     # TODO: openssl@3.x should be supported in later versions
     depends_on("openssl@:1")
+    # Cargo itself needs libcurl with nghttp2. If not found with pkg-config
+    # it will build vendored versions of libcurl, nghttp2, and openssl.
+    depends_on("curl+nghttp2")
     depends_on("libssh2")
     # https://github.com/rust-lang/cargo/issues/10446
     depends_on("libgit2@:1.3", when="@0:1.60")
@@ -183,9 +186,7 @@ class Rust(Package):
             {"platform": "cray", "target": "aarch64:"},
         ],
         "x86_64-apple-darwin": [{"platform": "darwin", "target": "x86_64:"}],
-        "aarch64-apple-darwin": [
-            {"platform": "darwin", "target": "aarch64:"},
-        ],
+        "aarch64-apple-darwin": [{"platform": "darwin", "target": "aarch64:"}],
     }
 
     # Specifies the strings which represent a pre-release Rust version. These

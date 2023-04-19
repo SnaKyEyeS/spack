@@ -17,7 +17,7 @@ import spack.schema.projections
 #: THIS NEEDS TO BE UPDATED FOR EVERY NEW KEYWORD THAT
 #: IS ADDED IMMEDIATELY BELOW THE MODULE TYPE ATTRIBUTE
 spec_regex = (
-    r"(?!hierarchy|core_specs|verbose|hash_length|defaults|"
+    r"(?!hierarchy|core_specs|verbose|hash_length|defaults|filter_hierarchy_specs|"
     r"whitelist|blacklist|"  # DEPRECATED: remove in 0.20.
     r"include|exclude|"  # use these more inclusive/consistent options
     r"projections|naming_scheme|core_compilers|all)(^\w[\w-]*)"
@@ -110,10 +110,7 @@ module_config_properties = {
     "arch_folder": {"type": "boolean"},
     "roots": {
         "type": "object",
-        "properties": {
-            "tcl": {"type": "string"},
-            "lmod": {"type": "string"},
-        },
+        "properties": {"tcl": {"type": "string"}, "lmod": {"type": "string"}},
     },
     "enable": {
         "type": "array",
@@ -130,6 +127,10 @@ module_config_properties = {
                     "core_compilers": array_of_strings,
                     "hierarchy": array_of_strings,
                     "core_specs": array_of_strings,
+                    "filter_hierarchy_specs": {
+                        "type": "object",
+                        "patternProperties": {spec_regex: array_of_strings},
+                    },
                 },
             },  # Specific lmod extensions
         ]
@@ -165,7 +166,7 @@ properties = {
                     # prefix-relative path to be inspected for existence
                     r"^[\w-]*": array_of_strings
                 },
-            },
+            }
         },
         "patternProperties": {
             valid_module_set_name: {
@@ -173,7 +174,7 @@ properties = {
                 "default": {},
                 "additionalProperties": False,
                 "properties": module_config_properties,
-            },
+            }
         },
     }
 }

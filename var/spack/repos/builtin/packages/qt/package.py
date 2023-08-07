@@ -61,12 +61,15 @@ class Qt(Package):
     variant("gtk", default=False, description="Build with gtkplus.")
     variant("gui", default=True, description="Build the Qt GUI module and dependencies")
     variant("opengl", default=False, description="Build with OpenGL support.")
+    variant("location", default=False, when="+opengl", description="Build the Qt Location module.")
     variant("phonon", default=False, description="Build with phonon support.")
     variant("shared", default=True, description="Build shared libraries.")
     variant("sql", default=True, description="Build with SQL support.")
     variant("ssl", default=True, description="Build with OpenSSL support.")
     variant("tools", default=True, description="Build tools, including Qt Designer.")
     variant("webkit", default=False, description="Build the Webkit extension")
+
+    provides("qmake")
 
     # Patches for qt@3
     patch("qt3-accept.patch", when="@3")
@@ -252,8 +255,6 @@ class Qt(Package):
             when="@:5.15.3",
             msg="Apple Silicon requires a very new version of qt",
         )
-
-    use_xcode = True
 
     # Mapping for compilers/systems in the QT 'mkspecs'
     compiler_mapping = {
@@ -712,6 +713,10 @@ class Qt(Package):
             # https://wiki.qt.io/QtWayland
             config_args.extend(["-skip", "wayland"])
 
+        if "~location" in spec:
+            if version >= Version("5.15"):
+                config_args.extend(["-skip", "qtlocation"])
+
         if "~opengl" in spec:
             config_args.extend(["-skip", "multimedia"])
             config_args.extend(["-skip", "qt3d"])
@@ -721,9 +726,6 @@ class Qt(Package):
 
             if version >= Version("5.14"):
                 config_args.extend(["-skip", "qtquick3d"])
-
-            if version >= Version("5.15"):
-                config_args.extend(["-skip", "qtlocation"])
 
         else:
             # v5.0: qt3d uses internal-only libassimp

@@ -56,7 +56,7 @@ import itertools
 import os
 import re
 import warnings
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import llnl.util.filesystem as fs
 import llnl.util.lang as lang
@@ -88,6 +88,7 @@ import spack.util.spack_yaml as syaml
 import spack.util.string
 import spack.variant as vt
 import spack.version as vn
+import spack.version.git_ref_lookup
 
 __all__ = [
     "CompilerSpec",
@@ -1780,7 +1781,7 @@ class Spec:
         try:
             # If the spec is in the DB, check the installed
             # attribute of the record
-            return spack.store.db.get_record(self).installed
+            return spack.store.STORE.db.get_record(self).installed
         except KeyError:
             # If the spec is not in the DB, the method
             #  above raises a Key error
@@ -1796,7 +1797,7 @@ class Spec:
         if not self.concrete:
             return False
 
-        upstream, _ = spack.store.db.query_by_spec_hash(self.dag_hash())
+        upstream, _ = spack.store.STORE.db.query_by_spec_hash(self.dag_hash())
         return upstream
 
     def traverse(self, **kwargs):
@@ -1828,11 +1829,11 @@ class Spec:
             raise spack.error.SpecError("Spec is not concrete: " + str(self))
 
         if self._prefix is None:
-            upstream, record = spack.store.db.query_by_spec_hash(self.dag_hash())
+            upstream, record = spack.store.STORE.db.query_by_spec_hash(self.dag_hash())
             if record and record.path:
                 self.prefix = record.path
             else:
-                self.prefix = spack.store.layout.path_for_spec(self)
+                self.prefix = spack.store.STORE.layout.path_for_spec(self)
         return self._prefix
 
     @prefix.setter
@@ -1933,7 +1934,7 @@ class Spec:
             env_matches = active_env.get_by_hash(self.abstract_hash) or []
             matches = [m for m in env_matches if m._satisfies(self)]
         if not matches:
-            db_matches = spack.store.db.get_by_hash(self.abstract_hash) or []
+            db_matches = spack.store.STORE.db.get_by_hash(self.abstract_hash) or []
             matches = [m for m in db_matches if m._satisfies(self)]
         if not matches:
             query = spack.binary_distribution.BinaryCacheQuery(True)
@@ -2942,9 +2943,9 @@ class Spec:
             SpecDeprecatedError: if any deprecated spec is found
         """
         deprecated = []
-        with spack.store.db.read_transaction():
+        with spack.store.STORE.db.read_transaction():
             for x in root.traverse():
-                _, rec = spack.store.db.query_by_spec_hash(x.dag_hash())
+                _, rec = spack.store.STORE.db.query_by_spec_hash(x.dag_hash())
                 if rec and rec.deprecated_for:
                     deprecated.append(rec)
         if deprecated:
@@ -4377,7 +4378,7 @@ class Spec:
                 write(morph(spec, spack.paths.spack_root))
                 return
             elif attribute == "spack_install":
-                write(morph(spec, spack.store.layout.root))
+                write(morph(spec, spack.store.STORE.layout.root))
                 return
             elif re.match(r"hash(:\d)?", attribute):
                 col = "#"
@@ -4497,7 +4498,7 @@ class Spec:
         if self.external:
             return InstallStatus.external
 
-        upstream, record = spack.store.db.query_by_spec_hash(self.dag_hash())
+        upstream, record = spack.store.STORE.db.query_by_spec_hash(self.dag_hash())
         if not record:
             return InstallStatus.absent
         elif upstream and record.installed:
@@ -4512,7 +4513,7 @@ class Spec:
         if not self.concrete:
             return None
         try:
-            record = spack.store.db.get_record(self)
+            record = spack.store.STORE.db.get_record(self)
             return record.explicit
         except KeyError:
             return None
@@ -4801,7 +4802,7 @@ class Spec:
             return
         for v in self.versions:
             if isinstance(v, vn.GitVersion) and v._ref_version is None:
-                v.attach_git_lookup_from_package(self.fullname)
+                v.attach_lookup(spack.version.git_ref_lookup.GitRefLookup(self.fullname))
 
 
 def parse_with_version_concrete(string: str, compiler: bool = False):
@@ -5146,9 +5147,7 @@ class LazySpecCache(collections.defaultdict):
         return value
 
 
-def save_dependency_specfiles(
-    root_spec_info, output_directory, dependencies=None, spec_format="json"
-):
+def save_dependency_specfiles(root: Spec, output_directory: str, dependencies: List[Spec]):
     """Given a root spec (represented as a yaml object), index it with a subset
     of its dependencies, and write each dependency to a separate yaml file
     in the output directory.  By default, all dependencies will be written
@@ -5157,26 +5156,15 @@ def save_dependency_specfiles(
     incoming spec is not json, that can be specified with the spec_format
     parameter. This can be used to convert from yaml specfiles to the
     json format."""
-    if spec_format == "json":
-        root_spec = Spec.from_json(root_spec_info)
-    elif spec_format == "yaml":
-        root_spec = Spec.from_yaml(root_spec_info)
-    else:
-        raise SpecParseError("Unrecognized spec format {0}.".format(spec_format))
 
-    dep_list = dependencies
-    if not dep_list:
-        dep_list = [dep.name for dep in root_spec.traverse()]
+    for spec in root.traverse():
+        if not any(spec.satisfies(dep) for dep in dependencies):
+            continue
 
-    for dep_name in dep_list:
-        if dep_name not in root_spec:
-            msg = "Dependency {0} does not exist in root spec {1}".format(dep_name, root_spec.name)
-            raise SpecDependencyNotFoundError(msg)
-        dep_spec = root_spec[dep_name]
-        json_path = os.path.join(output_directory, "{0}.json".format(dep_name))
+        json_path = os.path.join(output_directory, f"{spec.name}.json")
 
         with open(json_path, "w") as fd:
-            fd.write(dep_spec.to_json(hash=ht.dag_hash))
+            fd.write(spec.to_json(hash=ht.dag_hash))
 
 
 class SpecParseError(spack.error.SpecError):
@@ -5395,11 +5383,6 @@ class ConflictsInSpecError(spack.error.SpecError, RuntimeError):
                 long_message += match_fmt_custom.format(idx + 1, c, w, msg)
 
         super().__init__(message, long_message)
-
-
-class SpecDependencyNotFoundError(spack.error.SpecError):
-    """Raised when a failure is encountered writing the dependencies of
-    a spec."""
 
 
 class SpecDeprecatedError(spack.error.SpecError):

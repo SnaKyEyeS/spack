@@ -40,6 +40,9 @@ class Openmpi(AutotoolsPackage, CudaPackage):
 
     version("main", branch="main", submodules=True)
 
+    # RCs
+    version("5.0.0rc12", sha256="b292c5f417b2304c2abc8d9f05520af40375d5c7537552ea77d64fc58771e184")
+
     # Current
     version(
         "4.1.5", sha256="a640986bc257389dd379886fdae6264c8cfa56bc98b71ce3ae3dfbd8ce61dbe3"

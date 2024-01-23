@@ -35,6 +35,7 @@ class Flups(MakefilePackage):
         env["ARCH_FILE"] = "make_arch/make.spack"
         # Write out said arch file
         arch_file = {
+            "OPTS": "-DNDEBUG",
             "CC": spec["mpi"].mpicc,
             "CXX": spec["mpi"].mpicxx,
             "CCFLAGS": "-03 -fopenmp -std=c99 -DNDEBUG -DNO_PROF",

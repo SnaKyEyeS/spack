@@ -31,6 +31,7 @@ class P4est(AutotoolsPackage):
 
     variant("mpi", default=True, description="Enable MPI")
     variant("openmp", default=False, description="Enable OpenMP")
+    variant("debug", default=False, description="Enable debug mode")
 
     # build dependencies
     depends_on("automake", when="@2.0", type="build")
@@ -66,7 +67,6 @@ class P4est(AutotoolsPackage):
             "--disable-vtk-binary",
             "--without-blas",
             "CPPFLAGS=-DSC_LOG_PRIORITY=SC_LP_ESSENTIAL",
-            "CFLAGS=-O2",
         ]
 
         if "~mpi" in self.spec:
@@ -85,5 +85,12 @@ class P4est(AutotoolsPackage):
                 args.append("--enable-openmp")
         else:
             args.append("--disable-openmp")
+
+        debug = self.spec.variants["debug"].value
+        if debug:
+            args.append("--enable-debug")
+            args.append("CFLAGS=-O0 -g -Wall -Wextra")
+        else:
+            args.append("CFLAGS=-O2")
 
         return args
